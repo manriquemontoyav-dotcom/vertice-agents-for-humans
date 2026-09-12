@@ -1,0 +1,233 @@
+name: VERTICE Browser E2E and Demo Freeze
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PIP_NO_INPUT: '1'
+  PYTHONDONTWRITEBYTECODE: '1'
+  STRANDS_WHEEL_SHA256: ca37b9001531596a634e9249f97fb03ce70997e216f6a71d4e8f8182818cbf5c
+
+jobs:
+  browser-demo-freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Publication safety before installation
+        run: python scripts/publication_safety_scan.py
+
+      - name: Install verified runtime and browser dependencies
+        shell: bash
+        run: |
+          mkdir -p .verified-wheel
+          python -m pip download --no-deps --only-binary=:all: --dest .verified-wheel strands-agents==1.54.0
+          WHEEL=.verified-wheel/strands_agents-1.54.0-py3-none-any.whl
+          test -f "$WHEEL"
+          echo "$STRANDS_WHEEL_SHA256  $WHEEL" | sha256sum -c -
+          python -m pip install "$WHEEL" fastapi==0.128.2 uvicorn==0.48.0 httpx==0.28.1 playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          echo "STRANDS_WHEEL=$WHEEL" >> "$GITHUB_ENV"
+
+      - name: Verify full regression
+        run: python scripts/run_regression_json.py --output regression-result.json
+
+      - name: Freeze exact source candidate
+        shell: bash
+        run: |
+          git archive --format=zip --output=/tmp/vertice-source.zip "$GITHUB_SHA"
+          sha256sum /tmp/vertice-source.zip | tee SOURCE_ARCHIVE_SHA256.txt
+
+      - name: Start canonical application
+        shell: bash
+        run: |
+          python -m uvicorn webapp:app --host 127.0.0.1 --port 8765 > APP_SERVER.log 2>&1 &
+          echo $! > APP_SERVER.pid
+          python - <<'PY'
+          import json,time,urllib.request
+          url='http://127.0.0.1:8765/api/runtime/state'
+          for _ in range(80):
+              try:
+                  with urllib.request.urlopen(url,timeout=1) as r:
+                      d=json.load(r)
+                      assert d['state']=='READY'
+                      print('application_ready', d['state'])
+                      break
+              except Exception:
+                  time.sleep(.25)
+          else:
+              raise SystemExit('application did not become ready')
+          PY
+
+      - name: Certify APPLICATION_E2E on same commit
+        run: |
+          python application_e2e_certifier.py \
+            --base-url http://127.0.0.1:8765 \
+            --commit-sha "$GITHUB_SHA" \
+            --source-archive /tmp/vertice-source.zip \
+            --sdk-wheel "$STRANDS_WHEEL" \
+            --evidence STRANDS_APPLICATION_E2E_PASS.json
+
+      - name: Build release dossier and require preflight GREEN
+        run: |
+          python scripts/build_release_dossier.py \
+            --commit-sha "$GITHUB_SHA" \
+            --source-archive /tmp/vertice-source.zip \
+            --runtime-evidence STRANDS_APPLICATION_E2E_PASS.json \
+            --regression regression-result.json \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --output release-dossier.json
+          python release_gate.py release-dossier.json \
+            --runtime-evidence STRANDS_APPLICATION_E2E_PASS.json \
+            --stage preflight \
+            --output release-gate-result.json
+
+      - name: REAL browser E2E, screenshots, and private demo video
+        run: |
+          mkdir -p browser-screenshots demo-video
+          python scripts/browser_e2e_and_video.py \
+            --base-url http://127.0.0.1:8765 \
+            --commit-sha "$GITHUB_SHA" \
+            --source-archive /tmp/vertice-source.zip \
+            --application-evidence STRANDS_APPLICATION_E2E_PASS.json \
+            --screenshots-dir browser-screenshots \
+            --browser-evidence browser-evidence.json \
+            --video-dir demo-video/raw \
+            --video-file demo-video/VERTICE_PRIVATE_DEMO.webm \
+            --video-metadata video-freeze.json
+
+      - name: Require demo freeze 39/39 GREEN
+        run: |
+          python demo_freeze_gate.py \
+            --dossier release-dossier.json \
+            --application-evidence STRANDS_APPLICATION_E2E_PASS.json \
+            --browser-evidence browser-evidence.json \
+            --candidate /tmp/vertice-source.zip \
+            --video-metadata video-freeze.json \
+            --video-file demo-video/VERTICE_PRIVATE_DEMO.webm \
+            --screenshots-dir browser-screenshots \
+            --output demo-freeze-result.json
+          python - <<'PY'
+          import json
+          d=json.load(open('demo-freeze-result.json'))
+          assert d['status']=='GREEN', d
+          assert d['summary']=={'checks':39,'passed':39,'failed':0}, d['summary']
+          print('VERTICE DEMO FREEZE 39/39 GREEN')
+          PY
+
+      - name: Build compliance and exact final manifest
+        shell: bash
+        run: |
+          python submission_compliance_gate.py . --output submission-compliance-result.json
+          python - <<'PY'
+          import hashlib,json,os
+          def sh(path): return hashlib.sha256(open(path,'rb').read()).hexdigest()
+          commit=os.environ['GITHUB_SHA']
+          manifest={
+            'schema':'vertice.final-submission-manifest.v1',
+            'source':{'commit_sha':commit},
+            'artifacts':{
+              'candidate_sha256':sh('/tmp/vertice-source.zip'),
+              'dossier_sha256':sh('release-dossier.json'),
+              'application_sha256':sh('STRANDS_APPLICATION_E2E_PASS.json'),
+              'release_sha256':sh('release-gate-result.json'),
+              'demo_sha256':sh('demo-freeze-result.json'),
+              'compliance_sha256':sh('submission-compliance-result.json')},
+            'public':{'repository_url':'','video_url':'','repository_http_status':None,'video_http_status':None,'checked_at_utc':''},
+            'manual':{'aws_builder_id_confirmed':False,'devpost_story_complete':False,'devpost_media_complete':False,'devpost_links_match':False},
+            'authorization':{'commit_sha':'','candidate_sha256':'','decision':'PENDING'}
+          }
+          open('final-submission-manifest.json','w').write(json.dumps(manifest,indent=2)+'\n')
+          PY
+
+      - name: Candidate gate must be GREEN
+        run: |
+          python final_submission_gate.py final-submission-manifest.json \
+            --stage candidate \
+            --candidate /tmp/vertice-source.zip \
+            --dossier release-dossier.json \
+            --application STRANDS_APPLICATION_E2E_PASS.json \
+            --release release-gate-result.json \
+            --demo demo-freeze-result.json \
+            --compliance submission-compliance-result.json \
+            --output final-candidate-gate.json
+          python - <<'PY'
+          import json
+          d=json.load(open('final-candidate-gate.json'))
+          assert d['status']=='GREEN' and d['summary']['failed']==0, d
+          print('VERTICE FINAL CANDIDATE GATE GREEN', d['summary'])
+          PY
+
+      - name: Publication gate must remain blocked until Manuel authorizes publication
+        shell: bash
+        run: |
+          set +e
+          python final_submission_gate.py final-submission-manifest.json \
+            --stage publication \
+            --candidate /tmp/vertice-source.zip \
+            --dossier release-dossier.json \
+            --application STRANDS_APPLICATION_E2E_PASS.json \
+            --release release-gate-result.json \
+            --demo demo-freeze-result.json \
+            --compliance submission-compliance-result.json \
+            --output publication-gate.json
+          rc=$?
+          set -e
+          test "$rc" -eq 1
+          python - <<'PY'
+          import json
+          d=json.load(open('publication-gate.json'))
+          assert d['status']=='RED'
+          expected={'repository_url','video_url','repository_access','video_access','access_timestamp'}
+          assert expected <= set(d['manual_blockers']), d['manual_blockers']
+          print('PUBLICATION CORRECTLY BLOCKED PENDING MANUEL', d['manual_blockers'])
+          PY
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if test -f APP_SERVER.pid; then kill "$(cat APP_SERVER.pid)" || true; fi
+
+      - name: Upload browser/demo certification bundle
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vertice-browser-demo-freeze-${{ github.run_id }}-${{ github.sha }}
+          path: |
+            browser-screenshots/
+            browser-evidence.json
+            demo-video/VERTICE_PRIVATE_DEMO.webm
+            video-freeze.json
+            demo-freeze-result.json
+            STRANDS_APPLICATION_E2E_PASS.json
+            regression-result.json
+            release-dossier.json
+            release-gate-result.json
+            submission-compliance-result.json
+            final-submission-manifest.json
+            final-candidate-gate.json
+            publication-gate.json
+            SOURCE_ARCHIVE_SHA256.txt
+            APP_SERVER.log
+            docs/VIDEO_PLAN_FINAL.md
+          if-no-files-found: error
+          retention-days: 30

@@ -136,7 +136,10 @@ jobs:
       - name: Build compliance and exact final manifest
         shell: bash
         run: |
-          python submission_compliance_gate.py . --output submission-compliance-result.json
+          rm -rf /tmp/vertice-public-candidate
+          mkdir -p /tmp/vertice-public-candidate
+          unzip -q /tmp/vertice-source.zip -d /tmp/vertice-public-candidate
+          python submission_compliance_gate.py /tmp/vertice-public-candidate --output submission-compliance-result.json
           python - <<'PY'
           import hashlib,json,os
           def sh(path): return hashlib.sha256(open(path,'rb').read()).hexdigest()

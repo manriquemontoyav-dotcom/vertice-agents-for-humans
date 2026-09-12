@@ -64,6 +64,8 @@ def main():
         ck('commit_once',s['effect_count']==1 and s['runtime']=='REAL_STRANDS',s); ck('receipt_visible',bool(s.get('receipt_id')) and page.locator('#receipt').text_content()==s.get('receipt_id'),s.get('receipt_id'))
         layout=page.evaluate("()=>['truthRuntime','truthHuman','truthEffect','effectCount'].map(id=>{const e=document.getElementById(id);return {id,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth}})")
         ck('truth_labels_fit_cards',all(x['scrollWidth']<=x['clientWidth'] for x in layout),layout)
+        human_label=(page.locator('#truthHuman').text_content() or '').strip()
+        ck('actor_truth_label_visible',human_label=='UI RESOLUTION · ACTOR UNVERIFIED',human_label)
         f=a.screenshots_dir/'COMMITTED.png'; page.screenshot(path=str(f),full_page=True); shots.append(('COMMITTED',f))
         page.locator('#replay').click(); page.locator('#proofMessage').filter(has_text='REPLAY SAFE').wait_for(); s=api_state(page)
         ck('replay_no_second_effect',s.get('replay_result')=='SAME_RECEIPT_NO_SECOND_EFFECT' and s['effect_count']==1,s)

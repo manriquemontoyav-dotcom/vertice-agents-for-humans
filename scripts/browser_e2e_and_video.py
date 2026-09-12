@@ -14,7 +14,7 @@ def sha256(path: Path) -> str:
 
 def wait_phase(page, phase: str):
     page.locator('#phase').wait_for(state='visible')
-    page.wait_for_function("p => document.querySelector('#phase').textContent === p", phase)
+    page.wait_for_function("p => document.querySelector('#phase').textContent === p", arg=phase)
 
 def api_state(page):
     return page.evaluate("async () => await (await fetch('/api/runtime/state')).json()")

@@ -29,8 +29,8 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Pre-install publication verification
-        run: python scripts/verify_publication.py
+      - name: Pre-install publication safety
+        run: python scripts/publication_safety_scan.py
 
       - name: Download and verify exact Strands wheel
         shell: bash

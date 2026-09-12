@@ -1,0 +1,140 @@
+name: VERTICE Application E2E Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PIP_NO_INPUT: '1'
+  PYTHONDONTWRITEBYTECODE: '1'
+  STRANDS_WHEEL_SHA256: ca37b9001531596a634e9249f97fb03ce70997e216f6a71d4e8f8182818cbf5c
+
+jobs:
+  application-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Safety scan before installation
+        run: python scripts/publication_safety_scan.py
+
+      - name: Download and verify pinned Strands wheel
+        shell: bash
+        run: |
+          mkdir -p .verified-wheel
+          python -m pip download --no-deps --only-binary=:all: --dest .verified-wheel strands-agents==1.54.0
+          WHEEL=.verified-wheel/strands_agents-1.54.0-py3-none-any.whl
+          test -f "$WHEEL"
+          echo "$STRANDS_WHEEL_SHA256  $WHEEL" | sha256sum -c -
+          echo "STRANDS_WHEEL=$WHEEL" >> "$GITHUB_ENV"
+
+      - name: Clean install exact runtime
+        run: |
+          python -m pip install "$STRANDS_WHEEL"
+          python -m pip install fastapi==0.128.2 uvicorn==0.48.0 httpx==0.28.1
+          python - <<'PY'
+          from importlib.metadata import version
+          assert version('strands-agents') == '1.54.0'
+          print('strands-agents', version('strands-agents'))
+          PY
+
+      - name: Run regression and record actual counts
+        run: python scripts/run_regression_json.py --output regression-result.json
+
+      - name: Safety scan after tests
+        run: python scripts/publication_safety_scan.py
+
+      - name: Freeze exact source archive
+        shell: bash
+        run: |
+          git archive --format=zip --output=/tmp/vertice-source.zip "$GITHUB_SHA"
+          sha256sum /tmp/vertice-source.zip | tee SOURCE_ARCHIVE_SHA256.txt
+
+      - name: Start one application process
+        shell: bash
+        run: |
+          python -m uvicorn webapp:app --host 127.0.0.1 --port 8765 > APP_SERVER.log 2>&1 &
+          echo $! > APP_SERVER.pid
+          python - <<'PY'
+          import json,time,urllib.request
+          url='http://127.0.0.1:8765/api/runtime/state'
+          for i in range(60):
+              try:
+                  with urllib.request.urlopen(url,timeout=1) as r:
+                      body=json.load(r)
+                      assert body['state']=='READY'
+                      print('application_ready', body['state'])
+                      break
+              except Exception:
+                  time.sleep(.25)
+          else:
+              raise SystemExit('application did not become ready')
+          PY
+
+      - name: Certify APPLICATION_E2E against that process
+        run: |
+          python application_e2e_certifier.py \
+            --base-url http://127.0.0.1:8765 \
+            --commit-sha "$GITHUB_SHA" \
+            --source-archive /tmp/vertice-source.zip \
+            --sdk-wheel "$STRANDS_WHEEL" \
+            --evidence STRANDS_APPLICATION_E2E_PASS.json
+
+      - name: Build provenance dossier from observed artifacts
+        run: |
+          python scripts/build_release_dossier.py \
+            --commit-sha "$GITHUB_SHA" \
+            --source-archive /tmp/vertice-source.zip \
+            --runtime-evidence STRANDS_APPLICATION_E2E_PASS.json \
+            --regression regression-result.json \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --output release-dossier.json
+
+      - name: Require GREEN preflight release gate
+        run: |
+          python release_gate.py release-dossier.json \
+            --runtime-evidence STRANDS_APPLICATION_E2E_PASS.json \
+            --stage preflight \
+            --output release-gate-result.json
+          python - <<'PY'
+          import json
+          d=json.load(open('release-gate-result.json'))
+          assert d['status']=='GREEN', d
+          print('VERTICE RELEASE PREFLIGHT GREEN', d['summary'])
+          PY
+
+      - name: Stop application process
+        if: always()
+        shell: bash
+        run: |
+          if test -f APP_SERVER.pid; then kill "$(cat APP_SERVER.pid)" || true; fi
+
+      - name: Upload immutable certification bundle
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vertice-application-e2e-${{ github.run_id }}-${{ github.sha }}
+          path: |
+            STRANDS_APPLICATION_E2E_PASS.json
+            regression-result.json
+            release-dossier.json
+            release-gate-result.json
+            SOURCE_ARCHIVE_SHA256.txt
+            APP_SERVER.log
+          if-no-files-found: warn
+          retention-days: 30

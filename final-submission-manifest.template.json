@@ -1,0 +1,30 @@
+{
+  "schema": "vertice.final-submission-manifest.v1",
+  "source": {"commit_sha": ""},
+  "artifacts": {
+    "candidate_sha256": "",
+    "dossier_sha256": "",
+    "application_sha256": "",
+    "release_sha256": "",
+    "demo_sha256": "",
+    "compliance_sha256": ""
+  },
+  "public": {
+    "repository_url": "",
+    "video_url": "",
+    "repository_http_status": null,
+    "video_http_status": null,
+    "checked_at_utc": ""
+  },
+  "manual": {
+    "aws_builder_id_confirmed": false,
+    "devpost_story_complete": false,
+    "devpost_media_complete": false,
+    "devpost_links_match": false
+  },
+  "authorization": {
+    "commit_sha": "",
+    "candidate_sha256": "",
+    "decision": "PENDING"
+  }
+}

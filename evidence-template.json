@@ -1,0 +1,37 @@
+{
+  "schema": "vertice.release-evidence.v2",
+  "build": {
+    "commit_sha": "",
+    "source_archive_sha256": "",
+    "candidate_sha256": "",
+    "workflow_run_id": "",
+    "clean_install": false
+  },
+  "tests": {"passed": 0, "failures": 0},
+  "security": {"scan_before": "NOT_RUN", "scan_after": "NOT_RUN", "secret_findings": null},
+  "runtime": {
+    "evidence_file_sha256": "",
+    "agent": "NOT_RUN",
+    "certification_status": "NOT_RUN",
+    "certification_checks": 0,
+    "interrupt": "NOT_RUN",
+    "resume": "NOT_RUN",
+    "effect_count": 0,
+    "replay": "NOT_RUN",
+    "tamper": "NOT_RUN",
+    "external_effect": "SIMULATED"
+  },
+  "product": {"public_name": "VÉRTICE", "tagline": "The agent works. You decide."},
+  "video": {"commit_sha": "", "evidence_file_sha256": "", "duration_seconds": 0, "truth_labels_visible": false},
+  "submission": {
+    "readme": false,
+    "architecture_diagram": false,
+    "license": "",
+    "private_material_excluded": false,
+    "repository_public": false,
+    "video_public": false,
+    "aws_builder_id_confirmed": false,
+    "devpost_fields_complete": false,
+    "manual_send_authorized": false
+  }
+}

@@ -1,0 +1,289 @@
+{
+  "schema": "vertice.submission-compliance-gate.v1",
+  "status": "GREEN",
+  "summary": {
+    "checks": 38,
+    "passed": 38,
+    "failed": 0
+  },
+  "categories": {
+    "package": {
+      "passed": 3,
+      "failed": 0
+    },
+    "security": {
+      "passed": 4,
+      "failed": 0
+    },
+    "official": {
+      "passed": 7,
+      "failed": 0
+    },
+    "identity": {
+      "passed": 1,
+      "failed": 0
+    },
+    "presentation": {
+      "passed": 8,
+      "failed": 0
+    },
+    "truth": {
+      "passed": 2,
+      "failed": 0
+    },
+    "technical": {
+      "passed": 5,
+      "failed": 0
+    },
+    "reproducibility": {
+      "passed": 3,
+      "failed": 0
+    },
+    "provenance": {
+      "passed": 2,
+      "failed": 0
+    },
+    "licensing": {
+      "passed": 1,
+      "failed": 0
+    },
+    "quality": {
+      "passed": 1,
+      "failed": 0
+    },
+    "design": {
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "checks": [
+    {
+      "name": "source_directory",
+      "status": "PASS",
+      "detail": "public candidate source directory exists",
+      "category": "package"
+    },
+    {
+      "name": "no_symlinks",
+      "status": "PASS",
+      "detail": "no symbolic links",
+      "category": "security"
+    },
+    {
+      "name": "no_forbidden_artifacts",
+      "status": "PASS",
+      "detail": "no caches, credentials, databases, private material or Git history",
+      "category": "security"
+    },
+    {
+      "name": "repository_size",
+      "status": "PASS",
+      "detail": "source tree is nonempty and at most 50 MiB",
+      "category": "package"
+    },
+    {
+      "name": "individual_file_size",
+      "status": "PASS",
+      "detail": "no individual file exceeds 5 MiB",
+      "category": "package"
+    },
+    {
+      "name": "readme",
+      "status": "PASS",
+      "detail": "root README exists and is nonempty",
+      "category": "official"
+    },
+    {
+      "name": "public_identity",
+      "status": "PASS",
+      "detail": "approved VÉRTICE identity appears in README",
+      "category": "identity"
+    },
+    {
+      "name": "readme_problem",
+      "status": "PASS",
+      "detail": "README contains problem section",
+      "category": "presentation"
+    },
+    {
+      "name": "readme_audience",
+      "status": "PASS",
+      "detail": "README contains audience section",
+      "category": "presentation"
+    },
+    {
+      "name": "readme_impact",
+      "status": "PASS",
+      "detail": "README contains impact section",
+      "category": "presentation"
+    },
+    {
+      "name": "readme_features",
+      "status": "PASS",
+      "detail": "README contains features section",
+      "category": "presentation"
+    },
+    {
+      "name": "readme_architecture",
+      "status": "PASS",
+      "detail": "README contains architecture section",
+      "category": "presentation"
+    },
+    {
+      "name": "readme_installation",
+      "status": "PASS",
+      "detail": "README contains installation section",
+      "category": "presentation"
+    },
+    {
+      "name": "readme_running",
+      "status": "PASS",
+      "detail": "README contains running section",
+      "category": "presentation"
+    },
+    {
+      "name": "readme_testing",
+      "status": "PASS",
+      "detail": "README contains testing section",
+      "category": "presentation"
+    },
+    {
+      "name": "truth_labels",
+      "status": "PASS",
+      "detail": "README explains REAL, SIMULATED and REPLAY",
+      "category": "truth"
+    },
+    {
+      "name": "strands_explained",
+      "status": "PASS",
+      "detail": "README explains non-trivial Strands use",
+      "category": "technical"
+    },
+    {
+      "name": "differentiation_explained",
+      "status": "PASS",
+      "detail": "README explains exact action and replay/mutation defense",
+      "category": "technical"
+    },
+    {
+      "name": "root_license",
+      "status": "PASS",
+      "detail": "root license file exists",
+      "category": "official"
+    },
+    {
+      "name": "allowed_license",
+      "status": "PASS",
+      "detail": "license text is MIT or Apache-2.0",
+      "category": "official"
+    },
+    {
+      "name": "architecture_document",
+      "status": "PASS",
+      "detail": "architecture document exists",
+      "category": "official"
+    },
+    {
+      "name": "architecture_diagram",
+      "status": "PASS",
+      "detail": "architecture diagram is present",
+      "category": "official"
+    },
+    {
+      "name": "testing_instructions",
+      "status": "PASS",
+      "detail": "judge testing instructions exist",
+      "category": "official"
+    },
+    {
+      "name": "testing_commands",
+      "status": "PASS",
+      "detail": "testing instructions include install and test commands",
+      "category": "reproducibility"
+    },
+    {
+      "name": "dependency_manifest",
+      "status": "PASS",
+      "detail": "dependency manifest exists",
+      "category": "reproducibility"
+    },
+    {
+      "name": "strands_dependency",
+      "status": "PASS",
+      "detail": "Strands dependency is declared",
+      "category": "technical"
+    },
+    {
+      "name": "ci_workflow",
+      "status": "PASS",
+      "detail": "GitHub Actions workflow exists",
+      "category": "reproducibility"
+    },
+    {
+      "name": "contribution_disclosure",
+      "status": "PASS",
+      "detail": "human and AI contribution record exists",
+      "category": "provenance"
+    },
+    {
+      "name": "human_ai_roles",
+      "status": "PASS",
+      "detail": "human and AI roles are distinguished",
+      "category": "provenance"
+    },
+    {
+      "name": "preexisting_work",
+      "status": "PASS",
+      "detail": "pre-existing work disclosure is explicit",
+      "category": "official"
+    },
+    {
+      "name": "third_party_notices",
+      "status": "PASS",
+      "detail": "third-party notice covers Strands",
+      "category": "licensing"
+    },
+    {
+      "name": "security_document",
+      "status": "PASS",
+      "detail": "security and privacy document exists",
+      "category": "security"
+    },
+    {
+      "name": "no_placeholders",
+      "status": "PASS",
+      "detail": "public documentation has no TODO/TBD/example placeholders",
+      "category": "quality"
+    },
+    {
+      "name": "no_overclaims",
+      "status": "PASS",
+      "detail": "public documentation avoids unsupported legal/product claims",
+      "category": "truth"
+    },
+    {
+      "name": "no_secret_patterns",
+      "status": "PASS",
+      "detail": "no common credential patterns detected",
+      "category": "security"
+    },
+    {
+      "name": "python_source",
+      "status": "PASS",
+      "detail": "Python source files exist",
+      "category": "technical"
+    },
+    {
+      "name": "strands_import",
+      "status": "PASS",
+      "detail": "source imports Strands Agents",
+      "category": "technical"
+    },
+    {
+      "name": "user_interface",
+      "status": "PASS",
+      "detail": "user interface entrypoint exists",
+      "category": "design"
+    }
+  ]
+}

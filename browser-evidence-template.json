@@ -1,0 +1,21 @@
+{
+  "schema": "vertice.browser-e2e.v1",
+  "scope": "BROWSER_APPLICATION_E2E",
+  "status": "NOT_RUN",
+  "checks_passed": 0,
+  "checks_total": 0,
+  "source": {"commit_sha": "", "archive_sha256": ""},
+  "application_evidence_sha256": "",
+  "runtime": "NOT_RUN",
+  "same_runtime_session": false,
+  "decision_actor": "OBSERVED_UI_CLICK_UNVERIFIED_ACTOR",
+  "external_effect": "SIMULATED",
+  "observed_states": [],
+  "screenshots": [
+    {"label": "INTERRUPTED", "file": "", "sha256": ""},
+    {"label": "COMMITTED", "file": "", "sha256": ""},
+    {"label": "REPLAY_BLOCKED", "file": "", "sha256": ""},
+    {"label": "MUTATION_BLOCKED", "file": "", "sha256": ""},
+    {"label": "DENIED", "file": "", "sha256": ""}
+  ]
+}
